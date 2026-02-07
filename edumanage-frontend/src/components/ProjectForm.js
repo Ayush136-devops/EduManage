@@ -5,7 +5,7 @@ const initialProjectData = {
   'Project ID': '',
   'Project Domain': '',
   'Subject': '',
-  'MajorMinor': '',
+  'Major/Minor': '',
   'Publication Type': '',
   'Status': '',
   'Student Names': '',
