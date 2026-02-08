@@ -235,10 +235,10 @@ export default function Dashboard({ user, onLogout }) {
       <div className="dashboard-content">
         <section className="stats-section">
           <div className="stats-grid">
-            <StatCard label="Total Projects" value={stats.total} icon="📊" color="#2563eb" />
-            <StatCard label="Ongoing" value={stats.ongoing} icon="⏳" color="#f59e0b" 
+            <StatCard label="Total Projects" value={stats.total} color="#2563eb" />
+            <StatCard label="Ongoing" value={stats.ongoing} color="#f59e0b" 
               percentage={stats.total ? ((stats.ongoing / stats.total) * 100).toFixed(0) : 0} />
-            <StatCard label="Completed" value={stats.completed} icon="✅" color="#10b981" 
+            <StatCard label="Completed" value={stats.completed} color="#10b981" 
               percentage={stats.total ? ((stats.completed / stats.total) * 100).toFixed(0) : 0} />
           </div>
 
