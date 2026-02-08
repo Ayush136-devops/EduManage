@@ -1732,3 +1732,80 @@ textarea:focus {
     right: var(--space-md);
   }
 }
+.google-login-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 12px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.google-login-btn:hover {
+  background-color: #f8f9fa;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.google-icon {
+  width: 20px;
+  margin-right: 12px;
+}
+
+.divider {
+  height: 1px;
+  background: #eee;
+  margin: 25px 0;
+} 
+/* Google Auth Styling to match VIT Theme */
+.auth-google-wrapper {
+  padding: 40px 0;
+  text-align: center;
+}
+
+.btn-google-auth {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 14px;
+  background-color: #ffffff;
+  border: 2px solid #e1e4e8;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #24292e;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  gap: 12px;
+}
+
+.btn-google-auth:hover {
+  background-color: #f6f8fa;
+  border-color: #0366d6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.google-icon-svg {
+  width: 22px;
+  height: 22px;
+}
+
+.google-disclaimer {
+  margin-top: 20px;
+  font-size: 0.85rem;
+  color: #6a737d;
+  line-height: 1.5;
+}
+
+.auth-footer-divider {
+  height: 1px;
+  background: #eee;
+  margin: 20px 0;
+}

@@ -2,81 +2,88 @@ import React, { useState, useEffect } from 'react';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
 import './App.css';
-import { apiFetch } from './api';
 import supabase from './supabaseClient';
 
 function App() {
-  const [page, setPage] = useState('login'); // login, register, dashboard
+  const [page, setPage] = useState('loading'); 
   const [user, setUser] = useState(null);
 
-  useEffect(() => {
-    // On app load, check if Supabase has an authenticated session (post-OAuth redirect)
-    (async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        const session = data?.session;
-        if (session && session.access_token) {
-          // Exchange with backend to create server session
-          const res = await fetch('/api/auth/google', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ access_token: session.access_token }),
-          });
-          const info = await res.json();
-          if (info.status === 'success') {
-            setUser({ name: info.name, professor_id: info.professor_id });
-            setPage('dashboard');
-          }
-        }
-      } catch (err) {
-        console.error('Error completing auth:', err);
+  const syncWithBackend = async (session) => {
+    if (!session) {
+      setPage('login');
+      return;
+    }
+
+    try {
+      // Use the full URL to avoid relative path issues during dev
+      const res = await fetch('http://127.0.0.1:5000/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ access_token: session.access_token }),
+      });
+      
+      const info = await res.json();
+      
+      if (info.status === 'success') {
+        setUser({ name: info.name, professor_id: info.professor_id });
+        setPage('dashboard');
+      } else {
+        console.error('Backend rejected login:', info.message);
+        setPage('login');
       }
-    })();
-
-    // Listen for auth changes (optional)
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, sessionData) => {
-      if (sessionData?.session?.access_token) {
-        fetch('/api/auth/google', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ access_token: sessionData.session.access_token }),
-        }).then(r => r.json()).then(info => {
-          if (info.status === 'success') {
-            setUser({ name: info.name, professor_id: info.professor_id });
-            setPage('dashboard');
-          }
-        }).catch(console.error);
-      }
-    });
-
-    return () => {
-      if (listener && listener.subscription) listener.subscription.unsubscribe && listener.subscription.unsubscribe();
-    };
-  }, []);
-
-  const onLogin = (userData) => {
-    setUser(userData);
-    setPage('dashboard');
+    } catch (err) {
+      console.error('Sync error:', err);
+      setPage('login');
+    }
   };
 
-  const onLogout = () => {
-    // Clear server session and local supabase session
-    apiFetch('/logout', { method: 'POST' }).finally(() => {
-      supabase.auth.signOut();
-      setUser(null);
-      setPage('login');
+  useEffect(() => {
+    // 1. Initial Check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        syncWithBackend(session);
+      } else {
+        setPage('login');
+      }
     });
-  }; 
+
+    // 2. Listen for Auth Changes (Google Redirect landing)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        syncWithBackend(session);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setPage('login');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (page === 'loading') {
+    return (
+      <div className="auth-container">
+        <div className="auth-bg"></div>
+        <div className="loading-spinner-container">
+          <span className="logo-icon">🎓</span>
+          <p></p>
+          <div className="spinner"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app">
       <main>
-        {(page === 'login' || page === 'register') && <Auth onLogin={onLogin} />}
-        {page === 'dashboard' && <Dashboard user={user} onLogout={onLogout} />}
+        {page === 'dashboard' ? (
+          <Dashboard user={user} onLogout={() => supabase.auth.signOut()} />
+        ) : (
+          <Auth />
+        )}
       </main>
-
       <footer className="footer">
-        &copy; 2025 EduManage
+        &copy; 2026 EduManage
       </footer>
     </div>
   );
