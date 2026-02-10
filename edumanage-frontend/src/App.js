@@ -16,7 +16,7 @@ function App() {
 
     try {
       // Use the full URL to avoid relative path issues during dev
-      const res = await fetch('http://127.0.0.1:5000/api/auth/google', {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ access_token: session.access_token }),
