@@ -1,9 +1,14 @@
 import os
+import logging
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from db import get_conn
 from auth import jwt_required
 from supabase_client import supabase
+
+# Setting up logging to catch the exact error in Render Logs
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
@@ -11,7 +16,7 @@ app = Flask(__name__)
 allowed_origins = [
     "http://localhost:3000", 
     "http://127.0.0.1:3000",
-    os.environ.get("FRONTEND_ORIGIN")
+    os.environ.get("FRONTEND_ORIGIN") # https://edumanage-lime.vercel.app
 ]
 allowed_origins = [origin for origin in allowed_origins if origin is not None]
 
@@ -28,20 +33,28 @@ PROJECT_FIELDS = [
     'Student Year', 'Student Department', 'Guide Name', 'Guide ID', 'Guide Department', 'Guide Email'
 ]
 
-# Helper to clean data types
+# Helper to strictly cast Integers to match your Supabase schema
 def clean_project_data(data):
     cleaned = {}
     for field in PROJECT_FIELDS:
         val = data.get(field)
-        # Force these to integers to match your Supabase schema
-        if field in ['Student Semester', 'Student Year'] and val is not None:
-            try:
-                cleaned[field] = int(val)
-            except (ValueError, TypeError):
+        if field in ['Student Semester', 'Student Year']:
+            if val is None or str(val).strip() == "":
                 cleaned[field] = None
+            else:
+                try:
+                    cleaned[field] = int(val) # Strict Integer casting
+                except (ValueError, TypeError):
+                    cleaned[field] = None
         else:
             cleaned[field] = val
     return cleaned
+
+# --- ROUTES ---
+
+@app.route("/", methods=["GET"])
+def home():
+    return jsonify({"status": "success", "message": "EduManage API v1.0"})
 
 @app.route("/api/auth/google", methods=["POST"])
 def google_auth():
@@ -58,6 +71,7 @@ def google_auth():
             "professor_id": user.id
         })
     except Exception as e:
+        logger.error(f"Auth Error: {e}")
         return jsonify(status="error", message=str(e)), 500
 
 @app.route("/api/get_projects", methods=["GET"])
@@ -66,12 +80,12 @@ def get_projects():
         conn = get_conn()
         from psycopg2.extras import RealDictCursor
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Table name and Project ID must be quoted for case sensitivity
+            # Table name is lowercase projects, but Project ID has a space
             cur.execute('SELECT * FROM "projects" ORDER BY "Project ID" DESC')
             projects = cur.fetchall()
         return jsonify(status="success", projects=projects)
     except Exception as e:
-        print(f"DEBUG: Database Error: {e}")
+        logger.error(f"DATABASE ERROR in get_projects: {e}")
         return jsonify(status="error", message=str(e)), 500
 
 @app.route("/api/add_project", methods=["POST"])
@@ -88,7 +102,7 @@ def add_project():
             conn.commit()
         return jsonify(status="success", message="Project added successfully")
     except Exception as e:
-        print(f"DEBUG: Add Error: {e}")
+        logger.error(f"DATABASE ERROR in add_project: {e}")
         return jsonify(status="error", message=str(e)), 500
 
 @app.route("/api/update_project", methods=["POST"])
@@ -110,7 +124,7 @@ def update_project():
             conn.commit()
         return jsonify(status="success", message="Project updated")
     except Exception as e:
-        print(f"DEBUG: Update Error: {e}")
+        logger.error(f"DATABASE ERROR in update_project: {e}")
         return jsonify(status="error", message=str(e)), 500
 
 @app.route("/api/delete_project", methods=["POST"])
@@ -124,11 +138,8 @@ def delete_project():
             conn.commit()
         return jsonify(status="success", message="Project deleted")
     except Exception as e:
+        logger.error(f"DATABASE ERROR in delete_project: {e}")
         return jsonify(status="error", message=str(e)), 500
-
-@app.route("/", methods=["GET"])
-def home():
-    return jsonify({"status": "success", "message": "EduManage API v1.0"})
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
