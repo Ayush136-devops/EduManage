@@ -7,15 +7,15 @@ from supabase_client import supabase
 
 app = Flask(__name__)
 
-# Dynamic CORS Configuration
-# Reads FRONTEND_ORIGIN from Render Environment Variables
+# 1. DYNAMIC CORS CONFIGURATION
+# Allows your Vercel URL to talk to this backend
 allowed_origins = [
     "http://localhost:3000", 
     "http://127.0.0.1:3000",
-    os.environ.get("FRONTEND_ORIGIN") # Allows your live Vercel URL
+    os.environ.get("FRONTEND_ORIGIN") # Set to https://edumanage-lime.vercel.app in Render
 ]
 
-# Clean the list to remove None values if the environment variable isn't set
+# Clean the list to remove None values
 allowed_origins = [origin for origin in allowed_origins if origin is not None]
 
 CORS(app, 
@@ -47,6 +47,7 @@ def google_auth():
             "professor_id": user.id
         })
     except Exception as e:
+        print(f"DEBUG: Auth Error: {e}") # Check Render Logs
         return jsonify(status="error", message=str(e)), 500
 
 # 2. GET ALL PROJECTS
@@ -56,12 +57,12 @@ def get_projects():
         conn = get_conn()
         from psycopg2.extras import RealDictCursor
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Added double quotes to "projects" and "Project ID" for Postgres case-sensitivity
+            # PostgreSQL requires double quotes for mixed-case names like "Project ID"
             cur.execute('SELECT * FROM "projects" ORDER BY "Project ID" DESC')
             projects = cur.fetchall()
         return jsonify(status="success", projects=projects)
     except Exception as e:
-        print(f"DEBUG: Database Error in get_projects: {e}") # Appears in Render Logs
+        print(f"DEBUG: Database Error in get_projects: {e}") # Check Render Logs
         return jsonify(status="error", message=str(e)), 500
 
 # 3. ADD NEW PROJECT
@@ -69,6 +70,7 @@ def get_projects():
 def add_project():
     data = request.get_json()
     params = [data.get(field) for field in PROJECT_FIELDS]
+    # Quotes around each column name for safety
     cols = ", ".join([f'"{f}"' for f in PROJECT_FIELDS])
     placeholders = ", ".join(["%s"] * len(PROJECT_FIELDS))
     sql = f'INSERT INTO "projects" ({cols}) VALUES ({placeholders})'
@@ -79,6 +81,7 @@ def add_project():
             conn.commit()
         return jsonify(status="success", message="Project added successfully")
     except Exception as e:
+        print(f"DEBUG: Error in add_project: {e}")
         return jsonify(status="error", message=str(e)), 500
 
 # 4. UPDATE EXISTING PROJECT
@@ -101,6 +104,7 @@ def update_project():
             conn.commit()
         return jsonify(status="success", message="Project updated")
     except Exception as e:
+        print(f"DEBUG: Error in update_project: {e}")
         return jsonify(status="error", message=str(e)), 500
 
 # 5. DELETE PROJECT
@@ -115,6 +119,7 @@ def delete_project():
             conn.commit()
         return jsonify(status="success", message="Project deleted")
     except Exception as e:
+        print(f"DEBUG: Error in delete_project: {e}")
         return jsonify(status="error", message=str(e)), 500
 
 @app.route("/", methods=["GET"])
