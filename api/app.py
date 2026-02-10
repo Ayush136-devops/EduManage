@@ -56,10 +56,12 @@ def get_projects():
         conn = get_conn()
         from psycopg2.extras import RealDictCursor
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute('SELECT * FROM projects ORDER BY "Project ID" DESC')
+            # Added double quotes to "projects" and "Project ID" for Postgres case-sensitivity
+            cur.execute('SELECT * FROM "projects" ORDER BY "Project ID" DESC')
             projects = cur.fetchall()
         return jsonify(status="success", projects=projects)
     except Exception as e:
+        print(f"DEBUG: Database Error in get_projects: {e}") # Appears in Render Logs
         return jsonify(status="error", message=str(e)), 500
 
 # 3. ADD NEW PROJECT
@@ -69,7 +71,7 @@ def add_project():
     params = [data.get(field) for field in PROJECT_FIELDS]
     cols = ", ".join([f'"{f}"' for f in PROJECT_FIELDS])
     placeholders = ", ".join(["%s"] * len(PROJECT_FIELDS))
-    sql = f"INSERT INTO projects ({cols}) VALUES ({placeholders})"
+    sql = f'INSERT INTO "projects" ({cols}) VALUES ({placeholders})'
     try:
         conn = get_conn()
         with conn.cursor() as cur:
@@ -87,12 +89,11 @@ def update_project():
     if not project_id:
         return jsonify(status="error", message="Project ID required"), 400
     
-    # Create the UPDATE string: "Col1" = %s, "Col2" = %s...
     update_parts = [f'"{f}" = %s' for f in PROJECT_FIELDS if f != 'Project ID']
     params = [data.get(f) for f in PROJECT_FIELDS if f != 'Project ID']
-    params.append(project_id) # Add ID for the WHERE clause
+    params.append(project_id)
     
-    sql = f"UPDATE projects SET {', '.join(update_parts)} WHERE \"Project ID\" = %s"
+    sql = f'UPDATE "projects" SET {", ".join(update_parts)} WHERE "Project ID" = %s'
     try:
         conn = get_conn()
         with conn.cursor() as cur:
@@ -110,7 +111,7 @@ def delete_project():
     try:
         conn = get_conn()
         with conn.cursor() as cur:
-            cur.execute('DELETE FROM projects WHERE "Project ID" = %s', (project_id,))
+            cur.execute('DELETE FROM "projects" WHERE "Project ID" = %s', (project_id,))
             conn.commit()
         return jsonify(status="success", message="Project deleted")
     except Exception as e:
@@ -121,6 +122,5 @@ def home():
     return jsonify({"status": "success", "message": "EduManage API v1.0"})
 
 if __name__ == '__main__':
-    # Render provides a dynamic PORT environment variable
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
