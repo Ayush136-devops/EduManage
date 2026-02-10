@@ -8,14 +8,11 @@ from supabase_client import supabase
 app = Flask(__name__)
 
 # 1. DYNAMIC CORS CONFIGURATION
-# Allows your Vercel URL to talk to this backend
 allowed_origins = [
     "http://localhost:3000", 
     "http://127.0.0.1:3000",
-    os.environ.get("FRONTEND_ORIGIN") # Set to https://edumanage-lime.vercel.app in Render
+    os.environ.get("FRONTEND_ORIGIN")
 ]
-
-# Clean the list to remove None values
 allowed_origins = [origin for origin in allowed_origins if origin is not None]
 
 CORS(app, 
@@ -31,7 +28,21 @@ PROJECT_FIELDS = [
     'Student Year', 'Student Department', 'Guide Name', 'Guide ID', 'Guide Department', 'Guide Email'
 ]
 
-# 1. AUTHENTICATION ROUTE
+# Helper to clean data types
+def clean_project_data(data):
+    cleaned = {}
+    for field in PROJECT_FIELDS:
+        val = data.get(field)
+        # Force these to integers to match your Supabase schema
+        if field in ['Student Semester', 'Student Year'] and val is not None:
+            try:
+                cleaned[field] = int(val)
+            except (ValueError, TypeError):
+                cleaned[field] = None
+        else:
+            cleaned[field] = val
+    return cleaned
+
 @app.route("/api/auth/google", methods=["POST"])
 def google_auth():
     data = request.get_json()
@@ -47,30 +58,26 @@ def google_auth():
             "professor_id": user.id
         })
     except Exception as e:
-        print(f"DEBUG: Auth Error: {e}") # Check Render Logs
         return jsonify(status="error", message=str(e)), 500
 
-# 2. GET ALL PROJECTS
 @app.route("/api/get_projects", methods=["GET"])
 def get_projects():
     try:
         conn = get_conn()
         from psycopg2.extras import RealDictCursor
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # PostgreSQL requires double quotes for mixed-case names like "Project ID"
+            # Table name and Project ID must be quoted for case sensitivity
             cur.execute('SELECT * FROM "projects" ORDER BY "Project ID" DESC')
             projects = cur.fetchall()
         return jsonify(status="success", projects=projects)
     except Exception as e:
-        print(f"DEBUG: Database Error in get_projects: {e}") # Check Render Logs
+        print(f"DEBUG: Database Error: {e}")
         return jsonify(status="error", message=str(e)), 500
 
-# 3. ADD NEW PROJECT
 @app.route("/api/add_project", methods=["POST"])
 def add_project():
-    data = request.get_json()
+    data = clean_project_data(request.get_json())
     params = [data.get(field) for field in PROJECT_FIELDS]
-    # Quotes around each column name for safety
     cols = ", ".join([f'"{f}"' for f in PROJECT_FIELDS])
     placeholders = ", ".join(["%s"] * len(PROJECT_FIELDS))
     sql = f'INSERT INTO "projects" ({cols}) VALUES ({placeholders})'
@@ -81,13 +88,12 @@ def add_project():
             conn.commit()
         return jsonify(status="success", message="Project added successfully")
     except Exception as e:
-        print(f"DEBUG: Error in add_project: {e}")
+        print(f"DEBUG: Add Error: {e}")
         return jsonify(status="error", message=str(e)), 500
 
-# 4. UPDATE EXISTING PROJECT
 @app.route("/api/update_project", methods=["POST"])
 def update_project():
-    data = request.get_json()
+    data = clean_project_data(request.get_json())
     project_id = data.get('Project ID')
     if not project_id:
         return jsonify(status="error", message="Project ID required"), 400
@@ -104,10 +110,9 @@ def update_project():
             conn.commit()
         return jsonify(status="success", message="Project updated")
     except Exception as e:
-        print(f"DEBUG: Error in update_project: {e}")
+        print(f"DEBUG: Update Error: {e}")
         return jsonify(status="error", message=str(e)), 500
 
-# 5. DELETE PROJECT
 @app.route("/api/delete_project", methods=["POST"])
 def delete_project():
     data = request.get_json()
@@ -119,7 +124,6 @@ def delete_project():
             conn.commit()
         return jsonify(status="success", message="Project deleted")
     except Exception as e:
-        print(f"DEBUG: Error in delete_project: {e}")
         return jsonify(status="error", message=str(e)), 500
 
 @app.route("/", methods=["GET"])
