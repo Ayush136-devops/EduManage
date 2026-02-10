@@ -7,10 +7,20 @@ from supabase_client import supabase
 
 app = Flask(__name__)
 
-# Correct CORS to allow your React app to talk to these new routes
+# Dynamic CORS Configuration
+# Reads FRONTEND_ORIGIN from Render Environment Variables
+allowed_origins = [
+    "http://localhost:3000", 
+    "http://127.0.0.1:3000",
+    os.environ.get("FRONTEND_ORIGIN") # Allows your live Vercel URL
+]
+
+# Clean the list to remove None values if the environment variable isn't set
+allowed_origins = [origin for origin in allowed_origins if origin is not None]
+
 CORS(app, 
      supports_credentials=True, 
-     origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+     origins=allowed_origins,
      allow_headers=["Content-Type", "Authorization"],
      methods=["GET", "POST", "OPTIONS"])
 
@@ -111,5 +121,6 @@ def home():
     return jsonify({"status": "success", "message": "EduManage API v1.0"})
 
 if __name__ == '__main__':
+    # Render provides a dynamic PORT environment variable
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
