@@ -92,11 +92,11 @@ export default function Auth() {
                     className="google-icon-svg"
                   />
                 )}
-                <span>Continue with VIT Google Account</span>
+                <span>Continue with Google Account</span>
               </button>
               
               <p className="google-disclaimer">
-                Access is restricted to <strong>@vit.edu</strong> email addresses only.
+                By signing in, you agree to our <a href="/terms" className="link">Terms of Service</a> and <a href="/privacy" className="link">Privacy Policy</a>.
               </p>
             </div>
 
