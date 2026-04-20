@@ -1,5 +1,5 @@
 import os
-from urllib.parse import urlparse
+from urllib.parse import urlparse, unquote
 import psycopg2
 from dotenv import load_dotenv
 
@@ -14,10 +14,13 @@ def get_conn():
 
     try:
         result = urlparse(db_url)
+        # URL-decode the password in case it contains encoded special characters like %40 for @
+        password = unquote(result.password) if result.password else None
+        
         conn = psycopg2.connect(
             database=result.path.lstrip('/'),
             user=result.username,
-            password=result.password,
+            password=password,
             host=result.hostname,
             port=result.port,
             sslmode='require'
