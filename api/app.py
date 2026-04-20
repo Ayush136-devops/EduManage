@@ -83,10 +83,11 @@ def get_projects():
             # Table name is lowercase projects, but Project ID has a space
             cur.execute('SELECT * FROM "projects" ORDER BY "Project ID" DESC')
             projects = cur.fetchall()
+        conn.close()
         return jsonify(status="success", projects=projects)
     except Exception as e:
-        logger.error(f"DATABASE ERROR in get_projects: {e}")
-        return jsonify(status="error", message=str(e)), 500
+        logger.error(f"DATABASE ERROR in get_projects: {str(e)}", exc_info=True)
+        return jsonify(status="error", message="Failed to fetch projects"), 500
 
 @app.route("/api/add_project", methods=["POST"])
 def add_project():
